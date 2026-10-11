@@ -1,0 +1,59 @@
+name: CPU 실습과 패키지 검증
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cpu-tests:
+    name: CPU 검사 (Python ${{ matrix.python }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ['3.10', '3.12', '3.14']
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python }}
+      - name: 기본 패키지 설치
+        run: python -m pip install -e .
+      - name: 단위 테스트
+        run: python -m unittest discover -s tests -v
+      - name: 문서와 노트북 상태 검사
+        run: python scripts/check_repository.py
+      - name: CPU 명령행 예제
+        run: av-decision demo --out "$RUNNER_TEMP/decision-demo"
+
+      - name: 사용자 판별 조건 추가 예제
+        run: python examples/custom_criteria_demo.py --out "$RUNNER_TEMP/custom-criteria-demo"
+
+  notebook-package:
+    name: 노트북과 배포 패키지 검사
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: 노트북과 빌드 도구 설치
+        run: python -m pip install -e '.[notebook,dev]'
+      - name: 기본 CPU 노트북 실행
+        run: python scripts/verify_notebook.py
+      - name: 배포 파일 생성
+        run: python -m build
+      - name: 독립 환경에서 wheel 설치 확인
+        shell: bash
+        run: |
+          python -m venv "$RUNNER_TEMP/decision-wheel-env"
+          "$RUNNER_TEMP/decision-wheel-env/bin/python" -m pip install --no-deps dist/*.whl
+          cd "$RUNNER_TEMP"
+          "$RUNNER_TEMP/decision-wheel-env/bin/av-decision" demo --out "$RUNNER_TEMP/wheel-demo"

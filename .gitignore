@@ -1,0 +1,52 @@
+# Python 환경과 빌드 결과
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# 개인 설정과 인증정보
+.env
+.env.*
+!.env.example
+.aws/
+.ssh/
+*.pem
+*.key
+credentials.json
+service-account*.json
+
+# 모델, 영상, 데이터, 실행 결과는 별도 저장소에서 관리합니다.
+models/
+checkpoints/
+data/
+datasets/
+outputs/
+runs/
+.study-runs/
+*.safetensors
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.bin
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.webm
+*.parquet
+*.log
+
+# 노트북 임시 파일과 운영체제 파일
+.ipynb_checkpoints/
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

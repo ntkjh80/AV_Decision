@@ -1,0 +1,135 @@
+{
+  "schema_version": 1,
+  "rubric_id": "av-semantic-ko-v1",
+  "description": "영상에서 보이는 사실을 기록하고 생성 목표와 사후 비교하는 스터디용 기준입니다.",
+  "thresholds": {
+    "min_probability": 0.8,
+    "min_margin": 0.2,
+    "max_gap_s": 0.3,
+    "max_attempts": 2
+  },
+  "questions": {
+    "weather": {
+      "title": "날씨",
+      "instructions": "실제로 관측되는 날씨를 고르세요. 젖은 도로만으로 현재 비가 온다고 단정하지 마세요.",
+      "criteria": {
+        "clear": "비·눈·안개가 관측되지 않는 맑거나 흐린 날씨",
+        "rain": "비 줄기나 물보라 등 현재 우천을 뒷받침하는 단서",
+        "fog": "안개로 인한 광범위한 시야 저하",
+        "snow": "내리는 눈 등 강설의 단서",
+        "unknown": "복합 날씨이거나 근거 부족으로 구분하기 어려움"
+      },
+      "temporal": false
+    },
+    "lighting": {
+      "title": "조명과 시간대",
+      "instructions": "시각적 조명 상태를 고르세요. 정확한 시각은 추정하지 마세요.",
+      "criteria": {
+        "day": "주간 자연광",
+        "night": "야간 조명",
+        "transition": "새벽 또는 해질녘처럼 전환되는 조명",
+        "unknown": "노출 변화 등으로 구분하기 어려움"
+      },
+      "temporal": false
+    },
+    "cut_in": {
+      "title": "자차 앞으로 끼어들기",
+      "instructions": "다른 차로의 차량이 차선 경계를 넘어 자차가 진행하는 차로의 앞으로 들어오는 전후 과정이 보이나요? 카메라 회전만으로 판단하지 마세요.",
+      "criteria": {
+        "yes": "영상에서 해당 사건의 전후 변화가 관측됩니다.",
+        "no": "판단에 필요한 장면이 보이며 해당 사건은 관측되지 않습니다.",
+        "unknown": "가림, 짧은 구간, 낮은 시간 해상도 등으로 판단할 수 없습니다."
+      },
+      "temporal": true
+    },
+    "pedestrian_crossing": {
+      "title": "보행자 횡단",
+      "instructions": "보행자가 도로 또는 횡단보도를 가로질러 이동하는 전후 과정이 보이나요? 인도에 서 있는 것과 구분하세요.",
+      "criteria": {
+        "yes": "영상에서 해당 사건의 전후 변화가 관측됩니다.",
+        "no": "판단에 필요한 장면이 보이며 해당 사건은 관측되지 않습니다.",
+        "unknown": "가림, 짧은 구간, 낮은 시간 해상도 등으로 판단할 수 없습니다."
+      },
+      "temporal": true
+    },
+    "lead_braking": {
+      "title": "선행 차량 감속",
+      "instructions": "선행 차량이 감속하는 시각적 근거가 있나요? 제동등 하나만으로 급제동이나 감속량을 확정하지 마세요.",
+      "criteria": {
+        "yes": "영상에서 해당 사건의 전후 변화가 관측됩니다.",
+        "no": "판단에 필요한 장면이 보이며 해당 사건은 관측되지 않습니다.",
+        "unknown": "가림, 짧은 구간, 낮은 시간 해상도 등으로 판단할 수 없습니다."
+      },
+      "temporal": true
+    },
+    "gap_closing": {
+      "title": "선행 차량과의 간격 감소",
+      "instructions": "자차와 선행 차량 사이 간격이 줄어드는 시간적 단서가 있나요? 실제 거리·속도·충돌 시간은 추정하지 마세요.",
+      "criteria": {
+        "yes": "영상에서 해당 사건의 전후 변화가 관측됩니다.",
+        "no": "판단에 필요한 장면이 보이며 해당 사건은 관측되지 않습니다.",
+        "unknown": "가림, 짧은 구간, 낮은 시간 해상도 등으로 판단할 수 없습니다."
+      },
+      "temporal": true
+    },
+    "continuity": {
+      "title": "객체와 장면의 연속성",
+      "instructions": "관측한 프레임 사이에서 객체가 이유 없이 사라지거나 도로·차량 형태가 심하게 변형되는 생성 결함이 보이나요?",
+      "criteria": {
+        "consistent": "샘플링된 구간에서 명백한 결함을 발견하지 못함; 물리적 타당성 보증은 아님",
+        "artifact": "객체 소실·심한 형태 변형 등 명백한 결함이 보임",
+        "unknown": "가림이나 관측 간격 때문에 판정 불가"
+      },
+      "temporal": true
+    },
+    "visibility": {
+      "title": "관측 가능성",
+      "instructions": "주요 객체와 도로를 얼마나 관측할 수 있나요? 어려운 장면 자체를 불량으로 분류하지 마세요.",
+      "criteria": {
+        "clear": "주요 객체와 도로가 충분히 보임",
+        "limited": "안개·가림·어둠 등으로 일부 정보가 제한됨",
+        "unknown": "입력만으로 관측 상태도 판단하기 어려움"
+      },
+      "temporal": false
+    }
+  },
+  "target_presets": {
+    "rain": {
+      "weather": "rain"
+    },
+    "fog": {
+      "weather": "fog"
+    },
+    "snow": {
+      "weather": "snow"
+    },
+    "night": {
+      "lighting": "night"
+    },
+    "sunny": {
+      "weather": "clear",
+      "lighting": "day"
+    },
+    "daytime": {
+      "lighting": "day"
+    },
+    "pedestrian_crossing": {
+      "pedestrian_crossing": "yes"
+    },
+    "lane_cut_in": {
+      "cut_in": "yes"
+    }
+  },
+  "repair_hints": {
+    "weather": "요청한 날씨의 시각적 단서가 실제로 드러나도록 날씨 조건을 조정해 주세요.",
+    "lighting": "목표 조명 조건이 영상 전체에서 드러나도록 조정해 주세요.",
+    "cut_in": "옆 차로 차량이 경계를 넘어 자차 앞으로 들어오는 전후 과정을 포함해 주세요.",
+    "pedestrian_crossing": "보행자가 인도에 서 있기만 하지 않고 도로를 가로질러 이동하는 과정을 포함해 주세요.",
+    "lead_braking": "선행 차량의 감속 전후가 관측되도록 사건 구간을 확보해 주세요.",
+    "gap_closing": "선행 차량과 간격이 줄어드는 전후 과정을 포함해 주세요."
+  },
+  "unmapped_targets": {
+    "sudden_brake": "급제동의 감속량은 영상 의미 라벨만으로 확정하지 않습니다. 시간별 속도·궤적 등 별도 근거가 필요합니다.",
+    "near_collision": "충돌 직전 여부는 거리·상대속도·TTC 등 별도 근거가 필요합니다. 간격 감소를 동의어로 사용하지 않습니다."
+  }
+}

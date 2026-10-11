@@ -1,0 +1,17 @@
+Decision — 자율주행 영상 의미 재분류 스터디
+
+이 프로젝트는 AV 3.0 Blueprint Lab에 추가한 의미 재분류 실습을 독립 실행
+형태로 정리한 자료입니다. 기존 워크숍의 MIT No Attribution(MIT-0)
+라이선스 원문과 출처를 보존합니다. 코드의 라이선스는 LICENSE를 확인하세요.
+
+기반 워크숍:
+https://github.com/cloud-architect-ky/av3.0-blueprint-lab
+
+참고한 모델 구현과 문서:
+https://github.com/Liuziyu77/Valen
+https://huggingface.co/Valen-Team/Valen-2B
+https://github.com/nvidia-cosmos/cosmos-reason1
+
+모델 가중치, 실제 주행 영상, nuScenes 등의 데이터셋, NVIDIA 생성 코드와
+모델 서버는 이 저장소에 포함하지 않습니다. 별도로 준비한 외부 자료와
+패키지에는 각각의 라이선스가 적용됩니다.

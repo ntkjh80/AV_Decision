@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "av-decision-study"
+version = "0.1.0"
+description = "자율주행 생성 영상의 의미 재분류와 검증을 위한 한국어 스터디"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT-0"
+license-files = ["LICENSE", "NOTICE"]
+keywords = ["autonomous-driving", "video", "decision-model", "korean", "study"]
+dependencies = []
+
+# CPU 판정 로직은 외부 패키지를 요구하지 않습니다.
+# 영상 디코딩과 노트북 환경은 필요한 경우에만 설치합니다.
+[project.optional-dependencies]
+video = ["av>=12,<17", "Pillow>=10,<13"]
+notebook = ["jupyterlab>=4,<5", "ipykernel>=6,<8", "nbformat>=5.9,<6", "nbclient>=0.9,<1"]
+dev = ["build>=1,<2"]
+
+[project.scripts]
+av-decision = "av_decision.semantic_cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["av_decision*"]
+
+[tool.setuptools.package-data]
+av_decision = ["configs/*.json"]

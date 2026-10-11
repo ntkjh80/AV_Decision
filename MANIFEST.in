@@ -1,0 +1,7 @@
+include README.md CONTRIBUTING.md LICENSE NOTICE
+recursive-include docs *.md *.svg *.html *.js
+recursive-include notebooks *.ipynb
+recursive-include tests *.py
+recursive-include scripts *.py
+recursive-include src/av_decision/configs *.json
+recursive-include examples *.py *.json
