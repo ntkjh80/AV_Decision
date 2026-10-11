@@ -1,0 +1,6 @@
+{
+  "schema_version": 1,
+  "high_min_probability": 0.9,
+  "medium_min_probability": 0.8,
+  "scene_criteria": ["weather", "lighting"]
+}

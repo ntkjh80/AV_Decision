@@ -17,6 +17,12 @@
 | 7 | [검증 기록](SEMANTIC_VALIDATION.md) | 확인한 범위와 아직 측정하지 않은 성능을 구분합니다. |
 | 8 | [GitHub 게시 안내](GITHUB_GUIDE.md) | 소스·문서·노트북을 저장소로 관리합니다. |
 
+모델을 바꿔 비교하려면 [모델 설정과 교체](MODEL_CONFIGURATION.md)를 이어서 읽으세요. 모델 설정 JSON, 판별 기준 JSON, 영상별 목표가 각각 어디에 들어가는지와 새 연결 클래스의 계약을 설명합니다.
+
+GPU로 실제 추론을 시작할 때는 [GPU 실행 안내](GPU_GUIDE.md)를 보세요. CUDA 환경 설치, 노트북 커널, `device` 설정, 여러 GPU 중 하나 선택하기, 메모리 부족 대응, 원격 서버 방식의 차이를 설명합니다.
+
+실제 자료를 정리할 때는 [확신도별 분류와 보고서](CONFIDENCE_CLASSIFICATION.md)를 보세요. 확신도 → 상황 순서로 원본을 복사하고 HTML·MD·CSV·JSON 결과를 만듭니다. 여러 GPU의 자동 작업 배정과 모델 병렬화의 차이는 [GPU 자동 분산](GPU_DISTRIBUTION.md)에 정리했습니다.
+
 ## 그림과 조작형 시각화
 
 - 문서의 SVG 그림은 GitHub에서 바로 볼 수 있습니다.

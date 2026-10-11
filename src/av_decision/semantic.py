@@ -11,6 +11,10 @@ import json
 import math
 from pathlib import Path
 import time
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .provider_factory import ObservationProvider
 
 
 DEFAULT_RUBRIC = Path(__file__).resolve().parent / 'configs/criteria.ko.json'
@@ -106,6 +110,13 @@ def normalize_answers(raw, rubric):
 
 
 def validate_record(record, rubric):
+    kind = media_type(record)
+    if kind not in ('video', 'image'):
+        raise ValueError('media_type은 video 또는 image여야 합니다.')
+    if record.get('image_path') and record.get('video_path'):
+        raise ValueError('한 입력에는 image_path 또는 video_path 하나만 지정합니다.')
+    if (kind == 'image' and record.get('video_path')) or (kind == 'video' and record.get('image_path')):
+        raise ValueError('media_type과 파일 경로 필드를 맞춰 주세요.')
     for key in ('clip_id', 'source_group', 'split'):
         if not isinstance(record.get(key), str) or not record[key].strip():
             raise ValueError(f'{key}가 필요합니다.')
@@ -113,8 +124,8 @@ def validate_record(record, rubric):
         raise ValueError('split은 train/validation/test/unassigned 중 하나입니다.')
     if record.get('target_needs_review'):
         raise ValueError('이 입력의 목표를 사람이 검토한 뒤 target_needs_review를 false로 바꿔 주세요.')
-    if not isinstance(record.get('target'), dict) or not record['target']:
-        raise ValueError('생성 목표 target을 확인해 주세요. 알 수 없는 목표는 직접 작성합니다.')
+    if not isinstance(record.get('target'), dict):
+        raise ValueError('target은 질문 ID와 목표 라벨의 객체여야 합니다. 목표 없는 분류는 빈 객체를 사용합니다.')
     for key, choice in record['target'].items():
         if key not in rubric['questions'] or choice not in rubric['questions'][key]['criteria'] or choice == 'unknown':
             raise ValueError(f'목표 {key}={choice}를 판별 기준과 맞춰 주세요.')
@@ -125,7 +136,12 @@ def validate_record(record, rubric):
         raise ValueError('attempt는 현재까지 생성한 횟수이며 1부터 시작합니다.')
 
 
-def judge(record, raw_answers, evidence, rubric):
+def media_type(record):
+    """이전 영상 입력 계약을 유지하면서 단일 이미지도 구분합니다."""
+    return record.get('media_type', 'image' if record.get('image_path') else 'video')
+
+
+def judge(record, raw_answers, evidence, rubric, additional_criteria=()):
     """사실 재분류 → 목표 비교 → 처리 분기의 순서로 판정합니다.
 
     candidate는 학습 후보라는 뜻입니다. 검수 완료나 물리적으로 안전하다는 뜻이 아닙니다.
@@ -135,7 +151,14 @@ def judge(record, raw_answers, evidence, rubric):
     answers = normalize_answers(raw_answers, rubric)
     t = rubric['thresholds']
     findings, mismatches = [], []
-    checked = set(record['target']) | {'continuity', 'visibility'}
+    image = media_type(record) == 'image'
+    # 이미지 한 장으로 시간적 사건을 확정하지 않습니다. 원래 모델 답은 raw 파일에 남습니다.
+    unavailable = [key for key, q in rubric['questions'].items() if image and q['temporal']]
+    for key in unavailable:
+        answers[key] = {'choice': 'unknown', 'probabilities': None, 'confidence': None, 'margin': None}
+    checked = set(record['target']) | set(additional_criteria) | ({'visibility'} if image else {'continuity', 'visibility'})
+    if checked - set(answers):
+        raise ValueError('폴더 분류에 지정한 질문이 판별 기준에 없습니다.')
     for key in sorted(checked):
         answer = answers[key]
         if answer['choice'] == 'unknown':
@@ -145,6 +168,9 @@ def judge(record, raw_answers, evidence, rubric):
         elif answer['confidence'] < t['min_probability'] or answer['margin'] < t['min_margin']:
             findings.append(f'{key}:낮은_확신_또는_선택지_경합')
         if rubric['questions'][key]['temporal']:
+            if image:
+                findings.append(f'{key}:정지이미지_시간정보_없음')
+                continue
             gap = evidence.get('max_gap_s')
             hz = record.get('source_observation_hz')
             if not finite_number(gap) or gap < 0 or gap > t['max_gap_s']:
@@ -154,7 +180,7 @@ def judge(record, raw_answers, evidence, rubric):
         if key in record['target'] and answer['choice'] not in ('unknown', record['target'][key]):
             mismatches.append(key)
     # limited는 결함이 아닙니다. 어려운 장면을 별도로 보존합니다.
-    artifact = answers['continuity']['choice'] == 'artifact'
+    artifact = not image and answers['continuity']['choice'] == 'artifact'
     disposition = ('review' if findings else 'quarantine' if artifact else
                    'relabel_candidate' if mismatches else 'candidate')
     return {'clip_id': record['clip_id'], 'source_group': record['source_group'],
@@ -164,7 +190,8 @@ def judge(record, raw_answers, evidence, rubric):
             'disposition': disposition, 'requires_human_approval': True,
             'difficult_scene': answers['visibility']['choice'] != 'clear',
             'evidence': evidence, 'rubric_id': rubric['rubric_id'],
-            'rubric_sha256': fingerprint(rubric), 'attempt': record.get('attempt', 1)}
+            'rubric_sha256': fingerprint(rubric), 'attempt': record.get('attempt', 1),
+            'media_type': media_type(record), 'unavailable_temporal_criteria': unavailable}
 
 
 def regeneration_plan(record, result, rubric):
@@ -219,36 +246,55 @@ def check_group_splits(records):
         seen[group] = split
 
 
-def run_batch(records, provider, rubric, output_dir):
-    """실패 영상도 review로 기록합니다. 일부 실패를 성공률 계산에서 숨기지 않습니다."""
+def prepare_batch(records, rubric, output_dir, classification=None):
+    """분산 전 전체 입력의 중복·분할을 검사하고 출력 폴더를 한 번만 만듭니다."""
+    if not isinstance(records, list) or not records:
+        raise ValueError('입력은 비어 있지 않은 목록이어야 합니다.')
     check_group_splits(records)
     ids = [r['clip_id'] for r in records]
     if len(set(ids)) != len(ids):
         raise ValueError('clip_id가 중복됩니다.')
-    output = Path(output_dir)
+    if classification is not None:
+        from .classification import validate_classification
+        validate_classification(classification, rubric)
+    output = Path(output_dir).resolve()
     output.mkdir(parents=True, exist_ok=False)
-    results, plans = [], []
-    for i, record in enumerate(records):
-        started = time.perf_counter()
-        try:
-            validate_record(record, rubric)
-            raw, evidence = provider.observe(record, rubric, output / f'evidence-{i:04d}')
-            result = judge(record, raw, evidence, rubric)
-            write_json(output / f'raw-{i:04d}.json', raw)
-            plans.append(regeneration_plan(record, result, rubric))
-        except Exception as exc:
-            # 모델·통신·디코더의 예외도 영상별로 남깁니다. KeyboardInterrupt는 잡지 않습니다.
-            result = {'clip_id': record['clip_id'], 'source_group': record['source_group'],
-                      'split': record['split'], 'target': record.get('target', {}),
-                      'disposition': 'review', 'requires_human_approval': True,
-                      'error_type': type(exc).__name__, 'error': str(exc)}
-        result['elapsed_s'] = round(time.perf_counter() - started, 6)
-        result['provider'] = provider.metadata
-        results.append(result)
-    report = {'schema_version': 1, 'rubric': rubric, 'provider': provider.metadata,
+    return output
+
+
+def failed_result(record, exc, metadata):
+    return {'clip_id': record['clip_id'], 'source_group': record['source_group'],
+            'split': record['split'], 'target': record.get('target', {}),
+            'media_type': media_type(record), 'disposition': 'review',
+            'requires_human_approval': True, 'provider': dict(metadata),
+            'error_type': type(exc).__name__, 'error': str(exc), 'elapsed_s': None}
+
+
+def process_record(index, record, provider, rubric, output, additional_criteria=()):
+    """단일·분산 실행이 공유하는 파일 한 개 처리입니다. 오류도 결과 한 개로 남깁니다."""
+    started, plan = time.perf_counter(), None
+    try:
+        validate_record(record, rubric)
+        raw, evidence = provider.observe(record, rubric, Path(output) / f'evidence-{index:04d}')
+        # 형식이 잘못된 답도 JSON으로 저장할 수 있으면 원본 근거를 먼저 남깁니다.
+        write_json(Path(output) / f'raw-{index:04d}.json', raw)
+        result = judge(record, raw, evidence, rubric, additional_criteria)
+        plan = regeneration_plan(record, result, rubric)
+    except Exception as exc:
+        result = failed_result(record, exc, provider.metadata)
+    result['elapsed_s'] = round(time.perf_counter() - started, 6)
+    result['provider'] = dict(provider.metadata)
+    return result, plan
+
+
+def finish_batch(records, results, plans, metadata, rubric, output, classification=None, copy_files=True):
+    """점수·분류·보고서를 부모 프로세스에서 한 번에 저장합니다."""
+    from .classification import create_classification_report
+    report = {'schema_version': 1, 'rubric': rubric, 'provider': metadata,
               'counts': {s: sum(r['disposition'] == s for r in results)
                          for s in ('candidate', 'relabel_candidate', 'review', 'quarantine')},
               'results': results}
+    create_classification_report(records, report, output, classification, copy_files=copy_files)
     write_json(output / 'records.json', records)
     write_json(output / 'report.json', report)
     write_json(output / 'regeneration_plans.json', plans)
@@ -256,13 +302,28 @@ def run_batch(records, provider, rubric, output_dir):
     import csv
     with (output / 'human_review.csv').open('x', newline='', encoding='utf-8-sig') as stream:
         writer = csv.writer(stream)
-        writer.writerow(['clip_id', 'criterion', 'model_choice', 'human_choice', 'reviewer', 'note', 'disposition', 'error'])
+        writer.writerow(['clip_id', 'criterion', 'model_choice', 'human_choice', 'reviewer', 'note', 'disposition', 'error',
+                         'model_probability', 'margin', 'probability_kind'])
         for result in results:
             for key in rubric['questions']:
                 answer = result.get('observed', {}).get(key, {})
                 writer.writerow([result['clip_id'], key, answer.get('choice', ''), '', '', '',
-                                 result['disposition'], result.get('error', '')])
+                                 result['disposition'], result.get('error', ''), answer.get('confidence'),
+                                 answer.get('margin'), result['provider'].get('probability_kind', 'not_available')])
     return report
+
+
+def run_batch(records, provider: ObservationProvider, rubric, output_dir, classification=None, copy_files=True):
+    """실패도 집계합니다. classification을 지정하면 원본을 확신도 폴더로 복사합니다."""
+    output = prepare_batch(records, rubric, output_dir, classification)
+    results, plans = [], []
+    additional = classification['scene_criteria'] if classification else ()
+    for i, record in enumerate(records):
+        result, plan = process_record(i, record, provider, rubric, output, additional)
+        results.append(result)
+        if plan is not None:
+            plans.append(plan)
+    return finish_batch(records, results, plans, dict(provider.metadata), rubric, output, classification, copy_files)
 
 
 def evaluate_human_labels(results, labels, rubric=None):
@@ -329,7 +390,8 @@ def demo_data(rubric):
 
 class FixtureProvider:
     """CPU 학습용입니다. 영상 추론을 했다고 표시하지 않습니다."""
-    metadata = {'name': 'fixture', 'revision': 'ko-demo-v1', 'real_inference': False}
+    metadata = {'name': 'fixture', 'revision': 'ko-demo-v1', 'real_inference': False,
+                'probability_kind': 'synthetic_fixture'}
     def __init__(self, observations):
         self.observations = observations
     def observe(self, record, rubric, evidence_dir):

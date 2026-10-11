@@ -103,6 +103,10 @@ python3 -m av_decision.semantic_cli import-manifest \
 
 ## 5. 모델 연결 방식과 기술적 선택
 
+GPU용 PyTorch 설치부터 실행하려면 [GPU 실행 안내](GPU_GUIDE.md)를 먼저 읽으세요. 아래 설명은 모델 파일과 실행 환경이 준비되었다는 전제로 연결 방식을 다룹니다.
+
+모델 선택을 JSON 파일로 관리하려면 [모델 설정과 교체](MODEL_CONFIGURATION.md)를 참고하세요. `--provider-config`와 노트북의 `PROVIDER_CONFIG`가 같은 설정을 읽습니다. 기존의 개별 옵션 실행도 유지하며, 다른 호환 VLM 서버는 `--provider vlm-http`로 연결할 수 있습니다.
+
 | 경로 | 입력·출력 | 이번 구현에서 맡는 역할 |
 |---|---|---|
 | CPU Fixture | 미리 만든 선택지와 확률 | 규칙·보고서·검수 흐름을 학습합니다. 영상 모델이 아닙니다. |
@@ -166,7 +170,7 @@ python -m av_decision.semantic_cli run \
 1. 생성 목표·분할·원본 정보를 검증합니다.
 2. 원본 파일명이나 생성 프롬프트를 전달하지 않고 모든 영상에 같은 질문을 보냅니다.
 3. 응답이 정해진 형식인지 검사합니다.
-4. 목표에 지정한 기준과 공통 품질 기준 `continuity`, `visibility`를 검사합니다.
+4. 목표와 상황 폴더에 지정한 기준을 검사합니다. 공통 품질 검사는 영상의 `continuity`, `visibility`, 정지 이미지의 `visibility`입니다.
 5. 불확실성, 시간 해상도, 목표 불일치를 구분하여 결과를 기록합니다.
 
 | 결과 | 의미 | 다음 행동 |

@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "provider": "vlm-http",
+  "endpoint": "http://127.0.0.1:8000/v1",
+  "model": "REPLACE_WITH_SERVED_VISION_MODEL",
+  "revision": "REPLACE_WITH_ACTUAL_MODEL_COMMIT",
+  "timeout_s": 180,
+  "sampling": {
+    "sample_fps": 4.0,
+    "max_frames": 32,
+    "max_duration_s": 8.0
+  }
+}

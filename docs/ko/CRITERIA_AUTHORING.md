@@ -16,7 +16,7 @@
 | 기존 생성 이름을 목표로 바꾸기 | 기준 JSON의 `target_presets` | `wet_road` → `road_wet=yes` |
 | 다시 생성할 때 검토할 문장 | 기준 JSON의 `repair_hints` | 젖은 노면 단서를 포함하도록 제안 |
 
-`questions`에 추가하면 모든 영상에 그 질문을 보냅니다. 하지만 **그 질문이 자동 통과 조건이 되려면 `target`에도 들어가야 합니다.** 예외는 항상 검사하는 `continuity`, `visibility`입니다.
+`questions`에 추가하면 모든 영상에 그 질문을 보냅니다. 목표 일치 검사에 쓰려면 `target`에도 넣습니다. 확신도 폴더 분류를 켜면 `scene_criteria`의 질문도 점수 검사에 포함합니다. 공통 품질 기준은 영상에서 `continuity`, `visibility`, 정지 이미지에서는 `visibility`입니다. [확신도 분류 안내](CONFIDENCE_CLASSIFICATION.md)
 
 ## 2. 기본 기준을 복사해서 시작하세요
 

@@ -33,6 +33,8 @@ jobs:
 
       - name: 사용자 판별 조건 추가 예제
         run: python examples/custom_criteria_demo.py --out "$RUNNER_TEMP/custom-criteria-demo"
+      - name: 확신도별 파일 복사와 보고서 예제
+        run: python examples/confidence_sort_demo.py --out "$RUNNER_TEMP/confidence-sort-demo"
 
   notebook-package:
     name: 노트북과 배포 패키지 검사

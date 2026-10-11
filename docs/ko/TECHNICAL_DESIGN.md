@@ -29,7 +29,8 @@ CPU 예제의 `FixtureProvider`는 위 그림의 프레임 추출과 모델 호�
 |---|---|---|
 | 명령행 | [semantic_cli.py](../../src/av_decision/semantic_cli.py) | 옵션을 읽고 같은 공통 함수를 호출합니다. |
 | 기준과 판정 | [semantic.py](../../src/av_decision/semantic.py) | 설정·응답·입력 검증, 분기, 검수 파일, 평가를 처리합니다. |
-| 모델 연결 | [semantic_providers.py](../../src/av_decision/semantic_providers.py) | 영상 샘플링과 두 모델 연결 방식을 제공합니다. |
+| 모델 연결 | [semantic_providers.py](../../src/av_decision/semantic_providers.py) | 영상 샘플링과 Valen 로컬·VLM HTTP 연결을 제공합니다. Cosmos HTTP는 기존 이름을 유지합니다. |
+| 모델 선택 | [provider_factory.py](../../src/av_decision/provider_factory.py) | CLI·노트북이 공유하는 JSON 설정 검사, 연결 객체 생성, 공통 계약을 제공합니다. |
 | 기본 설정 | [criteria.ko.json](../../src/av_decision/configs/criteria.ko.json) | 질문, 선택지, 임계값, 목표 매핑, 수정 제안을 정의합니다. |
 | 실습 | [S1 노트북](../../notebooks/S1_Semantic_Video_Verification.ipynb) | 설명과 실행 셀을 제공하며 판정 로직을 복제하지 않습니다. |
 
@@ -139,7 +140,7 @@ flowchart TD
     E -->|아니요| K[candidate: 학습 후보]
 ```
 
-검사 대상은 `target`의 질문과 공통 품질 질문 `continuity`, `visibility`의 합집합입니다. `observed`에는 전체 질문의 답이 있어도 모든 라벨이 검수된 것은 아닙니다. 이번 분기에 실제로 사용한 질문은 `checked_criteria`에 기록합니다.
+검사 대상은 `target`, 분류 설정의 `scene_criteria`, 공통 품질 질문의 합집합입니다. 공통 품질 질문은 영상에서 `continuity`, `visibility`, 정지 이미지에서 `visibility`입니다. 정지 이미지의 시간 질문은 `unknown`으로 처리합니다. `observed`에는 전체 질문의 답이 있어도 모든 라벨이 검수된 것은 아닙니다. 이번 분기에 실제로 사용한 질문은 `checked_criteria`에 기록합니다.
 
 불확실성은 `unknown`, 확률 없음, 낮은 확률 또는 점수 차이, 시간 근거 부족을 뜻합니다. 결함이 관측되어도 불확실성이 함께 있으면 먼저 `review`가 됩니다. 결함 선택지는 `observed`에 남습니다.
 
@@ -170,7 +171,7 @@ sequenceDiagram
 | 산출물 | 주로 읽는 사람·프로그램 | 포함하는 내용 |
 |---|---|---|
 | `records.json` | 실험 재현 담당자 | 입력 기록의 복사본 |
-| `raw-xxxx.json` | 모델 연결 디버깅 담당자 | 정상 처리한 원시 응답 |
+| `raw-xxxx.json` | 모델 연결 디버깅 담당자 | 정규화 전에 JSON으로 저장한 응답. 호출 실패나 JSON으로 저장할 수 없는 응답은 없을 수 있음 |
 | `evidence-xxxx/sampling.json` | 검수자 | 프레임 시각·분석 구간·영상 해시 |
 | `report.json` | 스터디 참가자·평가 코드 | 관측·목표·분기·이유·기준·모델 정보 |
 | `human_review.csv` | 검수자 | 모델 답, 비어 있는 사람 정답 칸, 오류 |
